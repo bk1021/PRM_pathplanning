@@ -109,12 +109,12 @@ class PRM(object):
         return None
     
 
-    def pathshortcut(self, path, max_iter=5):
-        # generate short cutpath by random sampling of two points on two adjacent edge if it is collision-free 
-        print(f"Start path shortcutting. Total {max_iter} path shortcutting iterations.")
+    def pathshortcut(self, path):
+        # generate shortcut path by random sampling of two points on two adjacent edge if it is collision-free 
+        print(f"Start path shortcutting. Total {self.iter} path shortcutting iterations.")
         new_path = path.copy()
         iter = 0
-        while iter < max_iter:
+        while iter < self.iter:
             count = 0
             for i in range(0,len(path)-2,3):
                 x1, x2, x3 = path[i][0], path[i+1][0], path[i+2][0]
