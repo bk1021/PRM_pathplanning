@@ -71,7 +71,7 @@ class PRM(object):
             for i, node in enumerate(path):
                 print(f"Node {i}: {node}")
             if self.shortcut:
-                path = self.pathshortcut(path, self.iter)
+                path = self.pathshortcut(path)
         else:
             print("No path found.")
 
