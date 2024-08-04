@@ -11,9 +11,9 @@ def options():
   parser.add_argument('--x_size', type=int, help="Environment X size", default=10)
   parser.add_argument('--y_size', type=int, help="Environment Y size", default=6)
   parser.add_argument('--obs', type=int, help="Number of obstacles", default=5)
-  parser.add_argument('--plot_nodes', type=bool, help="Plot nodes sampled?", default=False)
-  parser.add_argument('--plot_edges', type=bool, help="Plot edges?", default=False)
-  parser.add_argument('--shortcut', type=bool, help="Generate shortcut?", default=True)
+  parser.add_argument('--plot_nodes', help="Plot nodes sampled", action="store_true")
+  parser.add_argument('--plot_edges', help="Plot edges", action="store_true")
+  parser.add_argument('--shortcut', help="Path shortcutting", action="store_true")
   parser.add_argument('--iter', type=int, help="Path shortcutting iterations", default=5)
 
   return parser.parse_args()
@@ -34,14 +34,9 @@ def main():
 
   print("Environment simulated.")
 
-  prm = PRM(env, (x_start,y_start), (x_goal,y_goal), opt.num_nodes, opt.R)
+  prm = PRM(env, (x_start,y_start), (x_goal,y_goal), opt)
   path = prm.find_path()
-
-  if opt.shortcut:
-    shortcut_path = prm.pathshortcut(path, opt.iter)
-    prm.plot_prm(opt.plot_nodes, opt.plot_edges, path, shortcut_path)
-  else:
-    prm.plot_prm(opt.plot_nodes, opt.plot_edges, path)
+  prm.plot_prm(opt.plot_nodes, opt.plot_edges, path)
   
   pl.ioff()
   pl.show()

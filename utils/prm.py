@@ -5,21 +5,26 @@ import pylab as pl
 
 class PRM(object):
     # define PRM path controller object
-    def __init__(self, env, start, goal, num_nodes=1000, edge_length=0.5):
+    def __init__(self, env, start, goal, opt):
         self.env = env
         self.start = start
         self.goal = goal
-        self.num_nodes = num_nodes
-        self.edge_length = edge_length
+        self.num_nodes = opt.num_nodes
+        self.edge_length = opt.R
+        self.shortcut = opt.shortcut
+        self.iter = opt.iter
         self.nodes = [start, goal]
         self.edges = []
         # print PRM info
-        print()
-        print("PRM object setting:")
+        print("\nPRM object setting:")
         print(f"Start: {start}")
         print(f"Goal: {goal}")
-        print(f"Number of nodes: {num_nodes}")
-        print(f"Edge Length: <={edge_length}")
+        print(f"Number of nodes: {opt.num_nodes}")
+        print(f"Edge Length: <={opt.R}")
+        if opt.shortcut:
+            print(f"Shortcut: Enabled ({opt.iter} iterations)")
+        else:
+            print("Shortcut: Disabled")
         print()
 
     def sample_nodes(self):
@@ -65,6 +70,8 @@ class PRM(object):
             print("Path found. Listing path nodes...")
             for i, node in enumerate(path):
                 print(f"Node {i}: {node}")
+            if self.shortcut:
+                path = self.pathshortcut(path, self.iter)
         else:
             print("No path found.")
 
@@ -134,7 +141,7 @@ class PRM(object):
             print(f"Node {i}: {node}")
         return new_path
 
-    def plot_prm(self, plot_nodes=False, plot_edges=False, path=None, shortcut_path=None):
+    def plot_prm(self, plot_nodes=False, plot_edges=False, path=None):
         # visualize PRM
         print("Generating PRM plot..")
         if plot_nodes:
@@ -149,11 +156,6 @@ class PRM(object):
             path_x = [node[0] for node in path]
             path_y = [node[1] for node in path]
             pl.plot(path_x, path_y, 'b-', lw=2)
-
-        if shortcut_path:
-            shortcut_path_x = [node[0] for node in shortcut_path]
-            shortcut_path_y = [node[1] for node in shortcut_path]
-            pl.plot(shortcut_path_x, shortcut_path_y, 'm-', lw=1)
         
         print("PRM plot generated.")
 
