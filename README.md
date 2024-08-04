@@ -5,7 +5,7 @@ This repo is a solution to exercises "Solving a 2D motion planning problem by PR
 ## Functions
 1. Plan a collision-free path by RPM in an simulated environment with triangular obstacles
 2. Post process the path by iterations of path shortcutting
-3. Visualize RPM path planning.
+3. Visualize RPM path planning
 
 
 ## Command Line Usage
