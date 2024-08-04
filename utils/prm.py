@@ -22,10 +22,10 @@ class PRM(object):
         print(f"Number of nodes: {opt.num_nodes}")
         print(f"Edge Length: <={opt.R}")
         if opt.shortcut:
-            print(f"Shortcut: Enabled ({opt.iter} iterations)")
+            print(f"Shortcut: Enabled ({opt.iter} iterations)\n")
         else:
-            print("Shortcut: Disabled")
-        print()
+            print("Shortcut: Disabled\n")
+
 
     def sample_nodes(self):
         # samples random nodes within the environment that are collision-free.
