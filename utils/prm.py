@@ -134,13 +134,13 @@ class PRM(object):
             print(f"Node {i}: {node}")
         return new_path
 
-    def plot_prm(self, plot_nodes=False, plot_edge=False, path=None, shortcut_path=None):
+    def plot_prm(self, plot_nodes=False, plot_edges=False, path=None, shortcut_path=None):
         # visualize PRM
         print("Generating PRM plot..")
         if plot_nodes:
             pl.scatter([node[0] for node in self.nodes], [node[1] for node in self.nodes], color='green', s=6, marker='o')
 
-        if plot_edge:
+        if plot_edges:
             for edge in self.edges:
                 (x1, y1), (x2, y2) = edge
                 pl.plot([x1,x2], [y1,y2], "g" , linewidth = 0.5)
