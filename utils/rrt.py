@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pylab as pl
 import random
+from matplotlib.lines import Line2D
 from environment_2d import Environment
 
 class Node:
@@ -62,9 +63,21 @@ class RRT:
     def goal_reachable(self, node):
         return self.calc_distance_and_angle(node, self.goal)[0] <= self.expand_dist \
         and not self.env.check_collision_line(node, self.goal)
+    
+    def generate_path(self, last_node):
+        path = [(self.goal.x, self.goal.y)]
+        parent_node = last_node
+        while parent_node:
+            path.append((parent_node.x, parent_node.y))
+            parent_node = parent_node.parent
+        return path[::-1]
 
     def planning(self):
-        for i in range(self.max_iter):
+        best_path = None
+        best_path_length = float('inf')
+        best_path_lines = []
+
+        for _ in range(self.max_iter):
             rnd_node = self.get_random_node()
             nearest_idx = self.get_nearest_node_index(self.node_list, rnd_node)
             nearest_node = self.node_list[nearest_idx]
@@ -73,14 +86,31 @@ class RRT:
 
             if new_node:
                 self.node_list.append(new_node)
+                pl.plot([new_node.parent.x, new_node.x], [new_node.parent.y, new_node.y], color="orange", linewidth=0.5)
+                pl.plot(new_node.x, new_node.y, "o", color="orange", markersize=2)
+                pl.pause(0.01)
+
                 if self.goal_reachable(new_node):
-                    path = [(self.goal.x, self.goal.y)]
-                    parent_node = new_node
-                    while parent_node:
-                        path.append((parent_node.x, parent_node.y))
-                        parent_node = parent_node.parent
-                    return path[::-1]
-        return None  # no path found
+                    path = self.generate_path(new_node)
+                    path_length = sum(np.hypot(path[i+1][0] - path[i][0], path[i+1][1] - path[i][1]) for i in range(len(path) - 1))
+                    if path_length < best_path_length:
+                        best_path = path
+                        best_path_length = path_length
+                        # Remove previous best path
+                        for line in best_path_lines:
+                            line.remove()
+                        best_path_lines = []
+                        # Plot new best path
+                        for i in range(len(path) - 1):
+                            x0, y0 = path[i]
+                            x1, y1 = path[i + 1]
+                            dot, = pl.plot(x0, y0, "o", color="green", markersize=3)
+                            best_path_lines.append(dot)
+                            line, = pl.plot([x0, x1], [y0, y1], color='green', linewidth=1.5)
+                            best_path_lines.append(line)
+                        pl.plot(path[-1][0], path[-1][1], "o", color="green", markersize=3)
+        
+        return best_path
 
 def main():   
     np.random.seed(4)
@@ -94,25 +124,16 @@ def main():
 
         start = (x_start, y_start)
         goal = (x_goal, y_goal)
-        rrt = RRT(env, start, goal, expand_dist=5, goal_bias_percent=10, max_iter=2000)
+        rrt = RRT(env, start, goal, expand_dist=0.5, goal_bias_percent=5, max_iter=3000)
         path = rrt.planning()
         if path is None:
             print("No path found!")
         else:
             print("Path found!")
-            print(path)
-            for node in rrt.node_list:
-                if node.parent:
-                    pl.plot([node.x, node.parent.x], [node.y, node.parent.y], "-g")
-            pl.plot([x for (x, y) in path], [y for (x, y) in path], '-r')
-            pl.plot(start[0], start[1], 'xr')
-            pl.plot(goal[0], goal[1], 'xr')
-            pl.grid(True)
-            pl.axis("equal")
-            pl.ioff()
-            pl.show()
     else:
         print("Failed to generate a valid start and goal.")
+    pl.ioff()
+    pl.show()
 
 if __name__ == '__main__':
     main()
