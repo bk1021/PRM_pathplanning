@@ -53,7 +53,7 @@ class RRT:
         min_index = dlist.index(min(dlist))
         return min_index
 
-    def steer(self, from_node, to_node, extend_length=float("inf")):
+    def steer(self, from_node, to_node, extend_length=float("inf"), animate=False, color='orange'):
         new_node = Node(from_node.x, from_node.y)
         d, theta = self.calc_distance_and_angle(new_node, to_node)
 
@@ -61,7 +61,7 @@ class RRT:
         new_node.y += min(extend_length, d) * np.sin(theta)
 
         if not self.env.check_collision_line(from_node, new_node):
-            self.update_parent(new_node, from_node)
+            self.update_parent(new_node, from_node, rewire=False, animate=animate, color=color)
             return new_node
         return None
 
@@ -94,12 +94,19 @@ class RRT:
         node.cost = parent.cost + self.calc_distance_and_angle(parent, node)[0]
         
         if rewire:
-            green_line, = pl.plot([node.parent.x, node.x], [node.parent.y, node.y], color='springgreen', linewidth=2)
+            green_line, = pl.plot([parent.x, node.x], [parent.y, node.y], color='springgreen', linewidth=2)
             if animate:
                 pl.pause(0.01)
             green_line.remove()
-            line, = pl.plot([node.parent.x, node.x], [node.parent.y, node.y], color=color, linewidth=0.5)
-            self.edge_plot[(node.parent, node)] = line
+            line, = pl.plot([parent.x, node.x], [parent.y, node.y], color=color, linewidth=0.5)
+            self.edge_plot[(parent, node)] = line
+
+        if not rewire:
+            line, = pl.plot([parent.x, node.x], [parent.y, node.y], color=color, linewidth=0.5)
+            self.edge_plot[(parent, node)] = line
+            pl.plot(node.x, node.y, "o", color=color, markersize=2)
+            if animate:
+                pl.pause(0.01)
 
     # def update_children(self, node, children, animate=False):
     #     for child in children:
@@ -162,34 +169,25 @@ class RRT:
     def planning(self, bidir=False, star=False, sample_max=False, animate=True):
         best_path = None
         min_path_cost = float('inf')
+        connection_node = []
 
         for _ in tqdm(range(self.max_iter)):
             rnd_node = self.get_random_node()
             nearest_idx_a = self.get_nearest_node_index(self.tree_a, rnd_node)
             nearest_node_a = self.tree_a[nearest_idx_a]
-            new_node_a = self.steer(nearest_node_a, rnd_node, self.expand_dist)
+            new_node_a = self.steer(nearest_node_a, rnd_node, self.expand_dist, animate=animate, color=self.color_a)
 
             if new_node_a:
                 self.tree_a.append(new_node_a)
-                line, = pl.plot([new_node_a.parent.x, new_node_a.x], [new_node_a.parent.y, new_node_a.y], color=self.color_a, linewidth=0.5)
-                self.edge_plot[(new_node_a.parent, new_node_a)] = line
-                pl.plot(new_node_a.x, new_node_a.y, "o", color=self.color_a, markersize=2)
-                if animate:
-                    pl.pause(0.01)
 
                 if star:
-                    self.rewire(self.tree_a, new_node_a, animate=animate)
+                    self.rewire(self.tree_a, new_node_a, animate=animate, color=self.color_a)
 
                 if not bidir:
                     if self.check_connection(new_node_a, self.goal):
                         if self.goal not in self.tree_a:
                             self.update_parent(self.goal, new_node_a)
                             self.tree_a.append(self.goal)
-                            line, = pl.plot([new_node_a.x, self.goal.x], [new_node_a.y, self.goal.y], color=self.color_a, linewidth=0.5)
-                            self.edge_plot[(new_node_a, self.goal)] = line
-                            pl.plot(self.goal.x, self.goal.y, "o", color=self.color_a, markersize=2)
-                            if animate:
-                                pl.pause(0.01)
                             path, path_cost = self.generate_path(self.goal)
                             path_plots = self.plot_path(path)
                             if not sample_max:
@@ -208,53 +206,89 @@ class RRT:
                             for plot in path_plots:
                                 plot.remove()
                             path_plots = self.plot_path(best_path)
+
                 else:
                     nearest_idx_b = self.get_nearest_node_index(self.tree_b, new_node_a)
                     nearest_node_b = self.tree_b[nearest_idx_b]
-                    new_node_b = self.steer(nearest_node_b, new_node_a, self.expand_dist)
+                    new_node_b = self.steer(nearest_node_b, new_node_a, self.expand_dist, animate=animate, color=self.color_b)
 
                     if new_node_b:
                         self.tree_b.append(new_node_b)
-                        line, = pl.plot([new_node_b.parent.x, new_node_b.x], [new_node_b.parent.y, new_node_b.y], color=self.color_b, linewidth=0.5)
-                        self.edge_plot[(new_node_b.parent, new_node_b)] = line
-                        pl.plot(new_node_b.x, new_node_b.y, "o", color=self.color_b, markersize=2)
-                        if animate:
-                            pl.pause(0.01)
 
                         if star:
-                            self.rewire(self.tree_b, new_node_b)
+                            self.rewire(self.tree_b, new_node_b, animate=animate, color=self.color_b)
 
                         if self.check_connection(new_node_a, new_node_b):
-                            if new_node_a[0] == new_node_b[0] and new_node_a[1] == new_node_b[1]:
-                                pass
-                            else:
-                                tree_b_end = self.steer(new_node_b, new_node_a)
-                                self.tree_b.append(tree_b_end)
-                                line, = pl.plot([tree_b_end.parent.x, tree_b_end.x], [tree_b_end.parent.y, tree_b_end.parent.y], color=self.color_b, linewidth=0.5)
-                                self.edge_plot[(tree_b_end.parent, tree_b_end)] = line
-                                pl.plot(tree_b_end.x, tree_b_end.y, "o", color=self.color_b, markersize=2)
+                            if len(connection_node) == 0:
+                                if new_node_a[0] == new_node_b[0] and new_node_a[1] == new_node_b[1]:
+                                    pl.plot([new_node_a.x, new_node_b.x], [new_node_a.y, new_node_b.y], "o", color="brown", markersize=3)
+                                else:
+                                    pl.plot([new_node_a.x, new_node_b.x], [new_node_a.y, new_node_b.y], color="brown", linewidth=0.8)
                                 if animate: 
                                     pl.pause(0.01)
+                                if self.root_a == self.start:
+                                    connection_node.append([new_node_a, new_node_b])
+                                    path_a, path_cost_a = self.generate_path(new_node_a)
+                                    path_b, path_cost_b = self.generate_path(new_node_b)
+                                    path_b = path_b[::-1]
+                                else:
+                                    connection_node.append([new_node_b, new_node_a])
+                                    path_a, path_cost_a = self.generate_path(new_node_b)
+                                    path_b, path_cost_b = self.generate_path(new_node_a)
+                                    path_b = path_b[::-1]     
+                                path = path_a + path_b
+                                path_cost = path_cost_a + path_cost_b + self.calc_distance_and_angle(new_node_a, new_node_b)[0]
+                                path_plots = self.plot_path(path)       
+                                if not sample_max:
+                                    return path, path_cost
+                                else:
+                                    best_path = path
+                                    min_path_cost = path_cost
+                        
                             if self.root_a == self.start:
-                                path_a, path_cost_a = self.generate_path(self.tree_a[-1])
-                                path_b, path_cost_b = self.generate_path(self.tree_b[-1])
-                                path_b = path_b[::-1]
+                                connection = [new_node_a, new_node_b]
                             else:
-                                path_a, path_cost_a = self.generate_path(self.tree_b[-1])
-                                path_b, path_cost_b = self.generate_path(self.tree_a[-1])
+                                connection = [new_node_b, new_node_a]
+
+                            if connection not in connection_node:
+                                if self.root_a == self.start:
+                                    connection_node.append([new_node_a, new_node_b])
+                                else:
+                                    connection_node.append([new_node_b, new_node_a])
+                                if new_node_a[0] == new_node_b[0] and new_node_a[1] == new_node_b[1]:
+                                    pl.plot([new_node_a.x, new_node_b.x], [new_node_a.y, new_node_b.y], "o", color="brown", markersize=3)
+                                else:
+                                    pl.plot([new_node_a.x, new_node_b.x], [new_node_a.y, new_node_b.y], color="brown", linewidth=0.8)
+                                if animate: 
+                                    pl.pause(0.01)
+                        
+                        if best_path:
+                            for node_a, node_b in connection_node:
+                                path_a, path_cost_a = self.generate_path(node_a)
+                                path_b, path_cost_b = self.generate_path(node_b)
                                 path_b = path_b[::-1]
-                            path = path_a + path_b[1:]
-                            path_cost = path_cost_a + path_cost_b
-                            pl.plot([x for x,_ in path], [y for _, y in path], color='green', linewidth=1.5)
-                            pl.plot([x for x,_ in path], [y for _, y in path], "o", color='green', markersize=3)
-                            return path, path_cost
+                                path = path_a + path_b
+                                path_cost = path_cost_a + path_cost_b + self.calc_distance_and_angle(new_node_a, new_node_b)[0]
+                                if path_cost < min_path_cost:
+                                    best_path = path
+                                    min_path_cost = path_cost
+                                    for plot in path_plots:
+                                        plot.remove()
+                                    path_plots = self.plot_path(best_path)
                         
                     self.tree_a, self.tree_b = self.tree_b, self.tree_a
                     self.root_a, self.root_b = self.root_b, self.root_a
                     self.color_a, self.color_b = self.color_b, self.color_a
                     self.bias_node = self.start if self.bias_node == self.goal else self.goal
         
-        return best_path, min_path_cost
+        if bidir:
+            for connection in connection_node:
+                connection[0].parent = connection[1]
+                connection[1].children.append(connection[0])
+                node_list = self.tree_a + self.tree_b
+        else:
+            node_list = self.tree_a
+        return best_path, min_path_cost, node_list
 
 def signal_handler(sig, frame):
     print("\nProgram interrupted! Exiting gracefully...")
@@ -274,7 +308,7 @@ def main():
         start = (x_start, y_start)
         goal = (x_goal, y_goal)
         rrt = RRT(env, start, goal, expand_dist=0.5, goal_bias_percent=0, max_iter=3000)
-        path, path_cost = rrt.planning(animate=False, bidir=False, star=True, sample_max=True)
+        path, path_cost, node_list = rrt.planning(animate=True, bidir=True, star=False, sample_max=False)
         if path is None:
             print("No path found!")
         else:
